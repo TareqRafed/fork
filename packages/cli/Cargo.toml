@@ -8,4 +8,5 @@ core = { path = "../core" }
 boards = { path = "../boards" }
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
+dialoguer = "0.11"
 anyhow = "1.0"

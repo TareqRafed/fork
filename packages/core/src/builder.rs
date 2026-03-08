@@ -1,23 +1,40 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boards::Board;
-use bollard::container::{Config, CreateContainerOptions, WaitContainerOptions, LogOutput, LogsOptions};
-use bollard::models::HostConfig;
+use bollard::container::{Config, CreateContainerOptions, LogOutput, LogsOptions, WaitContainerOptions};
 use bollard::image::CreateImageOptions;
+use bollard::models::HostConfig;
 use bollard::Docker;
 use futures_util::stream::StreamExt;
 use std::path::{Path, PathBuf};
 
-pub async fn build_project(board: &Board, project_path: &Path) -> Result<PathBuf> {
+pub async fn build_project(
+    board: &Board,
+    project_path: &Path,
+    tool_name: Option<&str>,
+) -> Result<PathBuf> {
     let docker = Docker::connect_with_local_defaults()?;
-    
+
     let abs_project_path = std::fs::canonicalize(project_path)
         .map_err(|e| anyhow!("Failed to resolve project path {}: {}", project_path.display(), e))?;
-    
-    println!("Using Docker image: {}", board.docker_image);
+
+    // Resolve build tool: CLI override > auto-detect
+    let tool = match tool_name {
+        Some(name) => board.get_build_tool(name)?,
+        None => board
+            .detect_build_tool(&abs_project_path)
+            .ok_or_else(|| anyhow!(
+                "No compatible build tool detected for {}. Available: {}",
+                board.name,
+                board.build_tools.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
+            ))?,
+    };
+
+    println!("Using build tool '{}' for {}", tool.name, board.name);
+    println!("Docker image: {}", tool.docker_image);
 
     let mut stream = docker.create_image(
         Some(CreateImageOptions {
-            from_image: board.docker_image.clone(),
+            from_image: tool.docker_image.clone(),
             ..Default::default()
         }),
         None,
@@ -28,14 +45,14 @@ pub async fn build_project(board: &Board, project_path: &Path) -> Result<PathBuf
         match pull_result {
             Ok(info) => {
                 if let Some(status) = info.status {
-                    println!("Docker Pull: {}", status);
+                    println!("Docker: {}", status);
                 }
             }
             Err(e) => return Err(e.into()),
         }
     }
 
-    let container_name = format!("fork-build-{}", board.name);
+    let container_name = format!("fork-build-{}-{}", board.name, tool.name);
     let _ = docker.remove_container(&container_name, None).await;
 
     let host_config = HostConfig {
@@ -43,24 +60,28 @@ pub async fn build_project(board: &Board, project_path: &Path) -> Result<PathBuf
         ..Default::default()
     };
 
-    let config = Config {
-        image: Some(board.docker_image.clone()),
-        cmd: Some(board.build_command.clone()),
+    let container_config = Config {
+        image: Some(tool.docker_image.clone()),
+        cmd: Some(tool.build_command.clone()),
         working_dir: Some("/project".to_string()),
         host_config: Some(host_config),
         ..Default::default()
     };
 
-    docker.create_container(
-        Some(CreateContainerOptions {
-            name: container_name.clone(),
-            ..Default::default()
-        }),
-        config,
-    ).await?;
+    docker
+        .create_container(
+            Some(CreateContainerOptions {
+                name: container_name.clone(),
+                ..Default::default()
+            }),
+            container_config,
+        )
+        .await?;
 
-    println!("Starting build for {}...", board.name);
-    docker.start_container::<String>(&container_name, None).await?;
+    println!("Building...");
+    docker
+        .start_container::<String>(&container_name, None)
+        .await?;
 
     let mut logs = docker.logs(
         &container_name,
@@ -75,27 +96,28 @@ pub async fn build_project(board: &Board, project_path: &Path) -> Result<PathBuf
     while let Some(log) = logs.next().await {
         match log {
             Ok(LogOutput::StdOut { message }) => print!("{}", String::from_utf8_lossy(&message)),
-            Ok(LogOutput::StdErr { message }) => eprintln!("{}", String::from_utf8_lossy(&message)),
+            Ok(LogOutput::StdErr { message }) => eprint!("{}", String::from_utf8_lossy(&message)),
             Err(e) => eprintln!("Error reading logs: {}", e),
             _ => {}
         }
     }
 
-    let mut wait_stream = docker.wait_container(&container_name, Some(WaitContainerOptions {
-        condition: "not-running",
-    }));
+    let mut wait_stream = docker.wait_container(
+        &container_name,
+        Some(WaitContainerOptions {
+            condition: "not-running",
+        }),
+    );
 
     if let Some(Ok(wait_response)) = wait_stream.next().await {
         if wait_response.status_code != 0 {
-            return Err(anyhow!("Build failed with exit code: {}", wait_response.status_code));
+            return Err(anyhow!(
+                "Build failed with exit code: {}",
+                wait_response.status_code
+            ));
         }
     }
 
-    let artifact_path = match board.name.as_str() {
-        "rp2040" => abs_project_path.join("build/firmware.uf2"),
-        "esp32c3" => abs_project_path.join("build/partition-table/partition-table.bin"),
-        _ => abs_project_path.join("target/release/firmware.bin"),
-    };
-
+    let artifact_path = abs_project_path.join(&tool.artifact_path);
     Ok(artifact_path)
 }
