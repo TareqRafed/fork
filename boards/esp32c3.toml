@@ -1,0 +1,20 @@
+name = "esp32c3"
+flash_tool = "espflash"
+
+[usb]
+vid = 0x303a
+pid = [0x1001]
+
+[[build_tools]]
+name = "esp-idf"
+docker_image = "espressif/idf:latest"
+build_command = ["idf.py", "build"]
+artifact_path = "build/firmware.bin"
+detect_command = "test -f CMakeLists.txt && test -f sdkconfig"
+
+[[build_tools]]
+name = "esp-hal"
+docker_image = "rust:latest"
+build_command = ["cargo", "build", "--release", "--target", "riscv32imc-unknown-none-elf"]
+artifact_path = "target/riscv32imc-unknown-none-elf/release/firmware.bin"
+detect_command = "grep -q 'esp-hal' Cargo.toml"

@@ -1,0 +1,27 @@
+name = "rp2040"
+flash_tool = "elf2uf2-rs"
+
+[usb]
+vid = 0x2e8a
+pid = [0x0003, 0x0005, 0x0009]
+
+[[build_tools]]
+name = "pico-sdk"
+docker_image = "raspberrypi/pico-sdk:latest"
+build_command = ["cmake", "-B", "build", ".", "&&", "make", "-C", "build"]
+artifact_path = "build/firmware.uf2"
+detect_command = "test -f CMakeLists.txt && grep -q pico_sdk CMakeLists.txt"
+
+[[build_tools]]
+name = "embassy-rp"
+docker_image = "rust:latest"
+build_command = ["cargo", "build", "--release", "--target", "thumbv6m-none-eabi"]
+artifact_path = "target/thumbv6m-none-eabi/release/firmware.elf"
+detect_command = "grep -q 'embassy-rp' Cargo.toml"
+
+[[build_tools]]
+name = "rp2040-hal"
+docker_image = "rust:latest"
+build_command = ["cargo", "build", "--release", "--target", "thumbv6m-none-eabi"]
+artifact_path = "target/thumbv6m-none-eabi/release/firmware.elf"
+detect_command = "grep -q 'rp2040-hal' Cargo.toml"
