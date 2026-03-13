@@ -2,7 +2,7 @@
 
 > **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-CLI to build any firmware for any MCUs, without buildtool abstractions or any additional dotfiles required. 
+CLI to build any firmware for any MCUs, without buildtool abstractions or any additional configurations. 
 
 > Currently only handful MCUs are defined, but adding them is pretty easy, just open a PR and add a board to `/boards` 
 
