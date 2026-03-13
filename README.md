@@ -1,61 +1,43 @@
-# Fork
+<h1><img src="assets/fork-logo.png" alt="Fork Logo" width="48" style="vertical-align: middle; margin-right: 8px;"/> Fork</h1>
 
-> **Beta software.** Fork is still in early development and may have rough edges. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
+> **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-A CLI tool that handles the annoying parts of multi-MCU development: detecting boards, building firmware in isolated Docker containers, and flashing devices.
+CLI to build any firmware for any MCUs*, No abstractions for the build system or any dotfiles required.
 
-**[Documentation](packages/docs/src/introduction.md)** — or build it locally with `mdbook serve packages/docs`.
+Simply `fork build -m stm32f405`
+You can also do `fork build -m stm32f405 -- --release [whatever your buildsystem takes]`
+
+Fork, will extract the correct versions, compilers and toolchain versions based on your workspace configurations, build docker OCI and run the image.
+
+**[Documentation](packages/docs/src/introduction.md)**
 
 ## The Problem
 
-You're working on a project that targets multiple MCUs. Each one needs different toolchains, SDKs, and build systems. Your machine is cluttered with conflicting tool versions. CI is a mess. New team members spend a day setting up their environment.
+You're working on a project that targets multiple MCUs. Each one needs different toolchains, SDKs, and build systems. Your machine is cluttered with conflicting tool versions but you just want to get started.
 
-## What Fork Does
-
-1. **Detects** connected MCUs via USB (VID/PID matching)
-2. **Builds** firmware in Docker containers with the right toolchain
-3. **Flashes** the resulting binary to your device
-
-```bash
-# Plug in your board, then:
-fork build
-fork flash
-```
-
-Fork auto-detects which build tool your project uses by checking your source files. Using `embassy-rp`? It knows. Using the Pico SDK with CMake? It knows. No configuration needed for common setups.
 
 ## Why not just use Docker directly?
-
-You could. For a single MCU with one toolchain, a Makefile wrapping `docker run` is probably simpler. Fork pays off when:
-
-- **Multiple MCUs** — you'd otherwise maintain separate `docker run` invocations with different images, flags, mount paths, and artifact locations per board
-- **Team onboarding** — `fork build` works for everyone immediately; no one has to know the right image tag or target triple
-- **Board detection** — Fork reads the USB bus and selects the right toolchain automatically; you don't specify the board, you just plug it in
-- **Consistent flash step** — `fork flash` knows the artifact path and flash tool for the detected board; no copy-pasting `elf2uf2-rs` incantations
 
 Without Fork, targeting an RP2040 with embassy and an ESP32-C3 with esp-idf in the same repo looks like:
 
 ```bash
-# RP2040
-docker run --rm -v $(pwd):/project \
+# Build RP2040 - Hope you remembered the UID mapping and target path!
+docker run --rm -u $(id -u):$(id -g) -v $(pwd):/project -w /project \
   ghcr.io/embassy-rs/embassy:latest \
-  cargo build --release --target thumbv6m-none-eabi
-elf2uf2-rs target/thumbv6m-none-eabi/release/firmware firmware.uf2
-# ... copy to device
+  sh -c "cargo build --release && cp target/thumbv6m-none-eabi/release/app.uf2 ."
 
-# ESP32-C3
-docker run --rm -v $(pwd):/project \
-  espressif/idf:latest \
-  idf.py build
-espflash flash build/firmware.bin
+# Build ESP32 - Different image, different CLI, different output folder
+docker run --rm -v $(pwd):/project -w /project \
+  espressif/idf:v5.1 \
+  sh -c "idf.py build && cp build/app.bin ."
 ```
 
 With Fork:
 
 ```bash
-fork build
-fork flash
+fork build -m rp2040 ./firmware/rp2040 && fork build -m esp32 ./firmware/esp32
 ```
+
 
 ## Installation
 
@@ -84,25 +66,13 @@ fork flash
 fork flash --file ./my-firmware.uf2
 ```
 
-## Supported Boards
-
-| Board | Build Tools | Flash Tool |
-|-------|-------------|------------|
-| RP2040 | pico-sdk, embassy-rp, rp2040-hal | elf2uf2-rs |
-| ESP32-C3 | esp-idf, esp-hal | espflash |
-| STM32F405 | embassy-stm32, stm32f4xx-hal | dfu-util |
 
 ## Adding a Board
 
-Create a TOML file in `boards/`:
+Open a PR, create a TOML file in `boards/`:
 
 ```toml
 name = "your-board"
-flash_tool = "your-flash-tool"
-
-[usb]
-vid = 0x1234
-pid = [0x5678, 0x5679]
 
 [[build_tools]]
 name = "some-hal"
@@ -112,7 +82,15 @@ artifact_path = "target/thumbv7em-none-eabihf/release/firmware.bin"
 detect_command = "grep -q 'some-hal' Cargo.toml"
 ```
 
-The `detect_command` runs in your project directory. If it exits 0, Fork considers that build tool compatible with your project.
+## Supported Boards
+
+> You can easily add a board by opening a PR
+
+| Board | Build Tools | Flash Tool |
+|-------|-------------|------------|
+| RP2040 | pico-sdk, embassy-rp, rp2040-hal | elf2uf2-rs |
+| ESP32-C3 | esp-idf, esp-hal | espflash |
+| STM32F405 | embassy-stm32, stm32f4xx-hal | dfu-util |
 
 ## FAQ
 
@@ -122,7 +100,7 @@ You don't need to. If your Makefiles work and your team is comfortable, Fork off
 
 **What if I need to customize the build?**
 
-The `build_command` in the board TOML is the full command passed to Docker — you control it. For anything more dynamic, `--tool` lets you select a specific build configuration, and you can always fall back to running Docker manually.
+The `build_command` in the board TOML is the full command passed to Docker — you control it. For anything more dynamic, `--tool` lets you select a specific build configuration.
 
 **My board isn't supported.**
 
@@ -130,7 +108,7 @@ Add a TOML file in `boards/` and open a PR. The format is straightforward and do
 
 **What about WSL / Windows?**
 
-Not tested yet. USB passthrough to WSL requires `usbipd`. Contributions welcome.
+Should work, Contributions welcome.
 
 ## Contributing
 
