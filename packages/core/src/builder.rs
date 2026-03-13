@@ -1,123 +1,169 @@
-use anyhow::{anyhow, Result};
-use boards::Board;
-use bollard::container::{Config, CreateContainerOptions, LogOutput, LogsOptions, WaitContainerOptions};
-use bollard::image::CreateImageOptions;
-use bollard::models::HostConfig;
-use bollard::Docker;
-use futures_util::stream::StreamExt;
-use std::path::{Path, PathBuf};
+use anyhow::{Result, anyhow};
+use std::io::Write;
+use std::path::Path;
+use std::process::{Command, Stdio};
 
-pub async fn build_project(
-    board: &Board,
+pub fn detect_runtime() -> Result<String> {
+    if which::which("podman").is_ok() {
+        return Ok("podman".to_owned());
+    }
+    if which::which("docker").is_ok() {
+        return Ok("docker".to_owned());
+    }
+    Err(anyhow!(
+        "Neither podman nor docker found. Please install one to use fork."
+    ))
+}
+
+fn normalize_mount_path(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        path.to_string_lossy().replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_string_lossy().into_owned()
+    }
+}
+
+fn is_cargo_cmd(cmd: &str) -> bool {
+    cmd.trim_start().starts_with("cargo ")
+}
+
+/// Pull `tag` if it exists in the registry (cache hit), otherwise build
+/// from the given Dockerfile content and push it.
+pub fn ensure_image(runtime: &str, tag: &str, dockerfile: &str) -> Result<()> {
+    let pull_ok = Command::new(runtime)
+        .args(["pull", tag])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if pull_ok {
+        return Ok(());
+    }
+
+    build_and_push(runtime, tag, dockerfile)
+}
+
+/// Always rebuild the composed image from the given Dockerfile content and push.
+/// Used by `fork bake`.
+pub fn bake_image(runtime: &str, tag: &str, dockerfile: &str) -> Result<()> {
+    build_and_push(runtime, tag, dockerfile)
+}
+
+/// Build an image from `dockerfile` and tag it locally. Does not push.
+pub fn build_local_image(runtime: &str, tag: &str, dockerfile: &str) -> Result<()> {
+    build_image(runtime, tag, dockerfile)
+}
+
+fn build_and_push(runtime: &str, tag: &str, dockerfile: &str) -> Result<()> {
+    build_image(runtime, tag, dockerfile)?;
+
+    let push_status = Command::new(runtime)
+        .args(["push", tag])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .map_err(|e| anyhow!("Failed to push {}: {}", tag, e))?;
+
+    if !push_status.success() {
+        return Err(anyhow!(
+            "Push failed (exit {})",
+            push_status.code().unwrap_or(-1)
+        ));
+    }
+
+    Ok(())
+}
+
+fn build_image(runtime: &str, tag: &str, dockerfile: &str) -> Result<()> {
+    let mut child = Command::new(runtime)
+        .args(["build", "--tag", tag, "-f", "-", "."])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|e| anyhow!("Failed to start {}: {}", runtime, e))?;
+
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(dockerfile.as_bytes())
+        .map_err(|e| anyhow!("Failed to write Dockerfile: {}", e))?;
+
+    let status = child.wait()?;
+    if !status.success() {
+        return Err(anyhow!(
+            "Build failed (exit {})",
+            status.code().unwrap_or(-1)
+        ));
+    }
+
+    Ok(())
+}
+
+/// Build inside a container
+/// stdout/err is inherited
+pub fn build_project(
     project_path: &Path,
-    tool_name: Option<&str>,
-) -> Result<PathBuf> {
-    let docker = Docker::connect_with_local_defaults()?;
+    image: &str,
+    cmd: &str,
+    extra_args: &[String],
+    runtime: &str,
+) -> Result<()> {
+    let abs = std::fs::canonicalize(project_path)
+        .map_err(|e| anyhow!("Cannot resolve project path: {}", e))?;
 
-    let abs_project_path = std::fs::canonicalize(project_path)
-        .map_err(|e| anyhow!("Failed to resolve project path {}: {}", project_path.display(), e))?;
-
-    // Resolve build tool: CLI override > auto-detect
-    let tool = match tool_name {
-        Some(name) => board.get_build_tool(name)?,
-        None => board
-            .detect_build_tool(&abs_project_path)
-            .ok_or_else(|| anyhow!(
-                "No compatible build tool detected for {}. Available: {}",
-                board.name,
-                board.build_tools.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
-            ))?,
+    let full_cmd = if extra_args.is_empty() {
+        cmd.to_owned()
+    } else {
+        format!("{} {}", cmd, extra_args.join(" "))
     };
 
-    println!("Using build tool '{}' for {}", tool.name, board.name);
-    println!("Docker image: {}", tool.docker_image);
+    build_in_container(&abs, image, &full_cmd, runtime)
+}
 
-    let mut stream = docker.create_image(
-        Some(CreateImageOptions {
-            from_image: tool.docker_image.clone(),
-            ..Default::default()
-        }),
-        None,
-        None,
-    );
+fn build_in_container(abs: &Path, image: &str, exec_cmd: &str, runtime: &str) -> Result<()> {
+    let bind = format!("{}:/project", normalize_mount_path(abs));
 
-    while let Some(pull_result) = stream.next().await {
-        match pull_result {
-            Ok(info) => {
-                if let Some(status) = info.status {
-                    println!("Docker: {}", status);
-                }
-            }
-            Err(e) => return Err(e.into()),
-        }
+    let mut child = Command::new(runtime);
+    child.args(["run", "--rm"]);
+
+    #[cfg(unix)]
+    {
+        let uid = std::process::Command::new("id")
+            .args(["-u"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_else(|_| "1000".into());
+
+        let gid = std::process::Command::new("id")
+            .args(["-g"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_else(|_| "1000".into());
+
+        child.args(["--user", &format!("{}:{}", uid, gid)]);
     }
 
-    let container_name = format!("fork-build-{}-{}", board.name, tool.name);
-    let _ = docker.remove_container(&container_name, None).await;
+    child.args(["-v", &bind, "-w", "/project", image, "sh", "-c", exec_cmd]);
+    let mut child = child
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|e| anyhow!("Failed to start {}: {}", runtime, e))?;
 
-    let host_config = HostConfig {
-        binds: Some(vec![format!("{}:/project", abs_project_path.display())]),
-        ..Default::default()
-    };
-
-    let container_config = Config {
-        image: Some(tool.docker_image.clone()),
-        cmd: Some(tool.build_command.clone()),
-        working_dir: Some("/project".to_string()),
-        host_config: Some(host_config),
-        ..Default::default()
-    };
-
-    docker
-        .create_container(
-            Some(CreateContainerOptions {
-                name: container_name.clone(),
-                ..Default::default()
-            }),
-            container_config,
-        )
-        .await?;
-
-    println!("Building...");
-    docker
-        .start_container::<String>(&container_name, None)
-        .await?;
-
-    let mut logs = docker.logs(
-        &container_name,
-        Some(LogsOptions::<String> {
-            stdout: true,
-            stderr: true,
-            follow: true,
-            ..Default::default()
-        }),
-    );
-
-    while let Some(log) = logs.next().await {
-        match log {
-            Ok(LogOutput::StdOut { message }) => print!("{}", String::from_utf8_lossy(&message)),
-            Ok(LogOutput::StdErr { message }) => eprint!("{}", String::from_utf8_lossy(&message)),
-            Err(e) => eprintln!("Error reading logs: {}", e),
-            _ => {}
-        }
+    let status = child.wait()?;
+    if !status.success() {
+        return Err(anyhow!(
+            "Build failed (exit {})",
+            status.code().unwrap_or(-1)
+        ));
     }
 
-    let mut wait_stream = docker.wait_container(
-        &container_name,
-        Some(WaitContainerOptions {
-            condition: "not-running",
-        }),
-    );
-
-    if let Some(Ok(wait_response)) = wait_stream.next().await {
-        if wait_response.status_code != 0 {
-            return Err(anyhow!(
-                "Build failed with exit code: {}",
-                wait_response.status_code
-            ));
-        }
-    }
-
-    let artifact_path = abs_project_path.join(&tool.artifact_path);
-    Ok(artifact_path)
+    Ok(())
 }

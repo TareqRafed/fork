@@ -1,7 +1,3 @@
-pub mod detector;
 pub mod builder;
-pub mod flasher;
 
-pub use detector::{detect_mcus, DeviceInfo};
-pub use builder::build_project;
-pub use flasher::flash_device;
+pub use builder::{bake_image, build_local_image, build_project, detect_runtime, ensure_image};
