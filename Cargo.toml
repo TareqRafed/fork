@@ -3,5 +3,12 @@ members = [
     "packages/core",
     "packages/cli",
     "packages/boards",
+    "packages/mdbook-boards",
 ]
+
+exclude = [
+    "examples/*",
+]
+
+
 resolver = "2"
