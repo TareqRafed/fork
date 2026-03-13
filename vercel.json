@@ -1,0 +1,5 @@
+{
+  "buildCommand": "bash scripts/build-docs.sh",
+  "outputDirectory": "packages/docs/book",
+  "framework": null
+}
