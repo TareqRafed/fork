@@ -1,0 +1,7 @@
+[book]
+title = "Fork"
+authors = ["TareqRafed"]
+language = "en"
+
+[preprocessor.boards]
+command = "cargo run -p mdbook-boards --"
