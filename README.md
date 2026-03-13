@@ -2,20 +2,27 @@
 
 > **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-CLI to build any firmware for any MCUs, without buildtools abstractions or any additional dotfiles required.
+CLI to build any firmware for any MCUs, without buildtool abstractions or any additional dotfiles required. 
 
-- Simply:
+> Currently only handful MCUs are defined, but adding them is pretty easy, just open a PR and add a board to `/boards` 
 
-```bash fork build -m stm32f405```
+Simply:
 
-- You can also do:
+```zsh
+fork build -m stm32f405
+```
 
-```bash fork build -m stm32f405 -- --release [whatever your buildsystem takes]```
+You can also do:
+
+```zsh
+fork build -m stm32f405 -- --release [whatever your buildsystem takes]
+```
 
 Fork detects your project's toolchain from config files, builds a Dockerfile and runs your build inside that container. No config files required in your project beyond what your build system already has.
 
-**[Documentation](packages/docs/src/introduction.md)**
+This was possible with a lower maintenance burden because it enables Docker-style builds to branch based on workspace files. This model maps naturally to embedded workflows—unlike standard software development, which has fewer build variables (no platform).
 
+**[Documentation](packages/docs/src/introduction.md)**
 
 ## Why not just use Docker directly?
 
@@ -63,6 +70,7 @@ fork flash
 # Flash specific file
 fork flash --file ./my-firmware.uf2
 ```
+
 
 
 ## Adding a Board
