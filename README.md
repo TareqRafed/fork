@@ -2,22 +2,19 @@
 
 > **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-CLI to build any firmware for any MCUs*, No abstractions for the build system or any dotfiles required.
+CLI to build any firmware for any MCUs, without buildtools abstractions or any additional dotfiles required.
 
-Simply:
+- Simply:
 
-```fork build -m stm32f405```
-You can also do:
+```bash fork build -m stm32f405```
 
-```fork build -m stm32f405 -- --release [whatever your buildsystem takes]```
+- You can also do:
 
-Fork, will extract the correct versions, compilers and toolchain versions based on your workspace configurations, build docker OCI and run the image.
+```bash fork build -m stm32f405 -- --release [whatever your buildsystem takes]```
+
+Fork detects your project's toolchain from config files, builds a Dockerfile and runs your build inside that container. No config files required in your project beyond what your build system already has.
 
 **[Documentation](packages/docs/src/introduction.md)**
-
-## The Problem
-
-You're working on a project that targets multiple MCUs. Each one needs different toolchains, SDKs, and build systems. Your machine is cluttered with conflicting tool versions but you just want to get started.
 
 
 ## Why not just use Docker directly?
@@ -36,27 +33,24 @@ docker run --rm -v $(pwd):/project -w /project \
   sh -c "idf.py build && cp build/app.bin ."
 ```
 
-With Fork:
+Fork allows you to do:
 
 ```bash
 fork build -m rp2040 ./firmware/rp2040 && fork build -m esp32 ./firmware/esp32
 ```
 
 
-## Installation
+## Install
+
+Requires Docker or Podman.
 
 ```bash
-cargo install --path packages/cli
+TODO
 ```
-
-Requires Docker.
 
 ## Usage
 
 ```bash
-# Detect connected MCUs
-fork detect
-
 # Build for detected MCU (auto-detects build tool)
 fork build
 
@@ -116,13 +110,9 @@ cmd = "default build command"
 
 ## FAQ
 
-**I've been doing embedded for 20 years. I have Makefiles. Why add another tool?**
-
-You don't need to. If your Makefiles work and your team is comfortable, Fork offers nothing you don't already have. It's aimed at teams without that institutional knowledge — or projects that span enough boards that maintaining those Makefiles gets tedious.
-
 **What if I need to customize the build?**
 
-The `build_command` in the board TOML is the full command passed to Docker — you control it. For anything more dynamic, `--tool` lets you select a specific build configuration.
+The `build_command` in the board TOML is the full command passed to Docker — you control it.
 
 **My board isn't supported.**
 
@@ -130,7 +120,7 @@ Add a TOML file in `boards/` and open a PR. The format is straightforward and do
 
 **What about WSL / Windows?**
 
-Should work, Contributions welcome.
+Should work, contributions welcome.
 
 ## Contributing
 
