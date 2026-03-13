@@ -1,20 +1,23 @@
 name = "stm32f405"
-flash_tool = "dfu-util"
 
-[usb]
-vid = 0x0483
-pid = [0xdf11]
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
 
-[[build_tools]]
-name = "embassy-stm32"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "thumbv7em-none-eabihf"]
-artifact_path = "target/thumbv7em-none-eabihf/release/firmware.bin"
-detect_command = "grep -q 'embassy-stm32' Cargo.toml"
+[rust.cargo.rustc.thumbv7emnoneeabihf]
+detect = [{ file = ".cargo/config.toml", key = "thumbv7em-none-eabihf" }]
+layer = ["RUN rustup target add thumbv7em-none-eabihf"]
+cmd = "cargo build"
 
-[[build_tools]]
-name = "stm32f4xx-hal"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "thumbv7em-none-eabihf"]
-artifact_path = "target/thumbv7em-none-eabihf/release/firmware.bin"
-detect_command = "grep -q 'stm32f4xx-hal' Cargo.toml"
+[c]
+detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+
+[c.cmake.gcc.armnoneabi.stm32cube]
+detect = [{ file = "CMakeLists.txt", key = "stm32" }]
+layer = ["FROM ghcr.io/getfork/stm32f405/c-cmake-gcc-armnoneabi-stm32cube:latest"]
+cmd = "cmake -B build . && make -C build"
+
+[arduino]
+detect = [{ file = "*.ino" }]
+layer = ["FROM ghcr.io/getfork/stm32f405/arduinocli:latest"]
+cmd = "arduino-cli core install STMicroelectronics:stm32 --additional-urls https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json && arduino-cli compile --fqbn STMicroelectronics:stm32:GenF4 --output-dir build ."

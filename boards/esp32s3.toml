@@ -1,0 +1,39 @@
+name = "esp32s3"
+
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.xtensaesp32s3noneelf.esphal]
+detect = [{ file = "Cargo.toml", key = "esp-hal" }]
+layer = ["RUN rustup target add xtensa-esp32s3-none-elf"]
+cmd = "cargo build"
+
+[rust.cargo.rustc.xtensaesp32s3noneelf.espidf]
+detect = [{ file = "Cargo.toml", key = "esp-idf-svc" }]
+layer = ["RUN rustup target add xtensa-esp32s3-none-elf"]
+cmd = "cargo build"
+
+[c]
+detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+
+[c.cmake.gcc.xtensaesp32s3elfelf.espidf]
+detect = [{ file = "sdkconfig", key = "CONFIG_" }]
+layer = ["FROM ghcr.io/getfork/esp32s3/c-cmake-gcc-xtensaesp32s3elfelf-espidf:latest"]
+cmd = "idf.py build"
+
+[arduino]
+detect = [{ file = "*.ino" }]
+layer = ["FROM ghcr.io/getfork/esp32s3/arduinocli:latest"]
+cmd = "arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json && arduino-cli compile --fqbn esp32:esp32:esp32s3 --output-dir build ."
+
+[micropython]
+detect = [{ file = "main.py", key = "import machine" }]
+layer = ["FROM ghcr.io/getfork/micropython:latest"]
+cmd = "mpy-cross main.py"
+
+[circuitpython]
+detect = [{ file = "code.py", key = "import board" }]
+layer = ["FROM ghcr.io/getfork/circuitpython:latest"]
+cmd = "mpy-cross code.py"

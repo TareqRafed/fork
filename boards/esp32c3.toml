@@ -1,20 +1,40 @@
 name = "esp32c3"
-flash_tool = "espflash"
 
-[usb]
-vid = 0x303a
-pid = [0x1001]
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}-slim", var = { file = "rust-toolchain.toml", key = "channel" } }]
 
-[[build_tools]]
-name = "esp-idf"
-docker_image = "espressif/idf:latest"
-build_command = ["idf.py", "build"]
-artifact_path = "build/firmware.bin"
-detect_command = "test -f CMakeLists.txt && test -f sdkconfig"
+[rust.cargo.rustc.riscv32imcacpnoneelf.esphal]
+detect = [{ file = "Cargo.toml", key = "esp-hal" }]
+layer = [
+    "RUN rustup target add riscv32imac-unknown-none-elf",
+    "RUN cargo install espflash"
+]
+cmd = "cargo build --release"
 
-[[build_tools]]
-name = "esp-hal"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "riscv32imc-unknown-none-elf"]
-artifact_path = "target/riscv32imc-unknown-none-elf/release/firmware.bin"
-detect_command = "grep -q 'esp-hal' Cargo.toml"
+[rust.cargo.rustc.riscv32imcacpnoneelf.espidf]
+detect = [{ file = "Cargo.toml", key = "esp-idf-svc" }]
+layer = [
+    "RUN rustup target add riscv32imac-unknown-none-elf",
+    "RUN apt-get update && apt-get install -y cmake gperf python3 python3-pip",
+    "RUN cargo install ldproxy"
+]
+cmd = "cargo build"
+
+[c]
+detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+
+[c.cmake.gcc.riscv32espelf.espidf]
+detect = [{ file = "sdkconfig", key = "CONFIG_IDF_TARGET_ESP32C3" }]
+layer = ["FROM espressif/idf:release-v5.1"] 
+cmd = "idf.py build"
+
+[arduino]
+detect = [{ file = "*.ino" }]
+layer = ["FROM ghcr.io/getfork/esp32c3/arduinocli:latest"]
+cmd = "arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json && arduino-cli compile --fqbn esp32:esp32:esp32c3 ."
+
+[micropython]
+detect = [{ file = "main.py" }]
+layer = ["RUN pip install mpy-cross mpremote"]
+cmd = "mpy-cross main.py && mpremote connect list"

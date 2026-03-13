@@ -1,27 +1,34 @@
 name = "rp2040"
-flash_tool = "elf2uf2-rs"
 
-[usb]
-vid = 0x2e8a
-pid = [0x0003, 0x0005, 0x0009]
 
-[[build_tools]]
-name = "pico-sdk"
-docker_image = "raspberrypi/pico-sdk:latest"
-build_command = ["cmake", "-B", "build", ".", "&&", "make", "-C", "build"]
-artifact_path = "build/firmware.uf2"
-detect_command = "test -f CMakeLists.txt && grep -q pico_sdk CMakeLists.txt"
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
 
-[[build_tools]]
-name = "embassy-rp"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "thumbv6m-none-eabi"]
-artifact_path = "target/thumbv6m-none-eabi/release/firmware.elf"
-detect_command = "grep -q 'embassy-rp' Cargo.toml"
+[rust.cargo.rustc.thumbv6mnonenabi]
+detect = [{ file = ".cargo/config.toml", key = "thumbv6m-none-eabi" }]
+layer = ["RUN rustup target add thumbv6m-none-eabi", "RUN cargo install flip-link"]
+cmd = "cargo build"
 
-[[build_tools]]
-name = "rp2040-hal"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "thumbv6m-none-eabi"]
-artifact_path = "target/thumbv6m-none-eabi/release/firmware.elf"
-detect_command = "grep -q 'rp2040-hal' Cargo.toml"
+[c]
+detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+
+[c.cmake.gcc.armnoneabi.picosdk]
+detect = [{ file = "CMakeLists.txt", key = "pico_sdk" }]
+layer = ["FROM ghcr.io/getfork/rp2040/c-cmake-gcc-armnoneabi-picosdk:latest"]
+cmd = "cmake -B build . && make -C build"
+
+[arduino]
+detect = [{ file = "*.ino" }]
+layer = ["FROM ghcr.io/getfork/rp2040/arduinocli:latest"]
+cmd = "arduino-cli core install rp2040:rp2040 --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json && arduino-cli compile --fqbn rp2040:rp2040:rpipico --output-dir build ."
+
+[micropython]
+detect = [{ file = "main.py", key = "import machine" }]
+layer = ["FROM ghcr.io/getfork/micropython:latest"]
+cmd = "mpy-cross main.py"
+
+[circuitpython]
+detect = [{ file = "code.py", key = "import board" }]
+layer = ["FROM ghcr.io/getfork/circuitpython:latest"]
+cmd = "mpy-cross code.py"
