@@ -12,41 +12,7 @@ Example:
 fork build -c rp2040
 ```
 
-Outputs:
-
-```
-  fork — container orchestration for firmware
-
-  → Using docker
-  ✓ Toolchain: rust → cargo → rustc → thumbv6mnonenabi
-  → Ensuring image fork-local/rp2040/rust.cargo.rustc.thumbv6mnonenabi:latest
-[+] Building 0.2s (7/7) FINISHED                                         docker:default
- => [internal] load build definition from Dockerfile                               0.0s
- => => transferring dockerfile: 122B                                               0.0s
- => [internal] load metadata for docker.io/library/rust:latest                     0.0s
- => [internal] load .dockerignore                                                  0.0s
- => => transferring context: 2B                                                    0.0s
- => [1/3] FROM docker.io/library/rust:latest                                       0.0s
- => CACHED [2/3] RUN rustup target add thumbv6m-none-eabi                          0.0s
- => CACHED [3/3] RUN cargo install flip-link                                       0.0s
- => exporting to image                                                             0.0s
- => => exporting layers                                                            0.0s
- => => writing image sha256:d6b43c5fe1f26f23498f68424c84d29b28ccea8f71b6449f02a17  0.0s
- => => naming to docker.io/fork-local/rp2040/rust.cargo.rustc.thumbv6mnonenabi:la  0.0s
-  → Building rp2040 with rust → cargo → rustc → thumbv6mnonenabi
-  ──────────────────────────────────────────────────
-    Updating crates.io index
- Downloading crates ...
-  Downloaded bare-metal v0.2.5
-  .
-  .
-  .
-  Downloaded rp2040-pac v0.6.0
-    Finished `dev` profile [optimized + debuginfo] target(s) in 2.09s
-  ──────────────────────────────────────────────────
-  ✓ Build complete.
-
-```
+![Example output](assets/carbon.png)
 
 You can also do:
 
