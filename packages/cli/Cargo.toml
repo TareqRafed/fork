@@ -1,7 +1,11 @@
 [package]
 name = "cli"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "fork"
+path = "src/main.rs"
 
 [dependencies]
 fork-core = { path = "../core", package = "core" }

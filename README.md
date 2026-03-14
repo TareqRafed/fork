@@ -57,8 +57,16 @@ fork build -c rp2040 ./firmware/rp2040 && fork build -c esp32 ./firmware/esp32
 Requires Docker or Podman.
 
 ```bash
-TODO
+curl -fsSL https://raw.githubusercontent.com/TareqRafed/fork/main/install.sh | sh
 ```
+
+Or with a specific version:
+
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/TareqRafed/fork/main/install.sh | sh
+```
+
+Binaries for Linux (x86\_64, aarch64) and macOS (x86\_64, arm64) are available on the [releases page](https://github.com/TareqRafed/fork/releases). Windows builds (.zip) are also available there.
 
 
 ## Adding a Recipe

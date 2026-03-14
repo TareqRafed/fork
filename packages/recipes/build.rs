@@ -2,15 +2,15 @@ use std::{env, fs, path::PathBuf};
 
 fn main() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let boards_dir = PathBuf::from(&manifest_dir)
-        .join("../../boards")
+    let recipes_dir = PathBuf::from(&manifest_dir)
+        .join("../../recipes")
         .canonicalize()
-        .expect("boards/ directory not found");
+        .expect("recipes/ directory not found");
 
-    println!("cargo:rerun-if-changed={}", boards_dir.display());
+    println!("cargo:rerun-if-changed={}", recipes_dir.display());
 
-    let mut entries: Vec<PathBuf> = fs::read_dir(&boards_dir)
-        .expect("cannot read boards/")
+    let mut entries: Vec<PathBuf> = fs::read_dir(&recipes_dir)
+        .expect("cannot read recipes/")
         .filter_map(|e| e.ok())
         .map(|e| e.path())
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("toml"))

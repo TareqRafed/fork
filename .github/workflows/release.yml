@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: fork
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev pkg-config
+
+      - name: Install cross-compilation tools (aarch64 Linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --package cli --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          ASSET="${{ env.BIN_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+          cp target/${{ matrix.target }}/release/fork ${{ env.BIN_NAME }}
+          tar czf "$ASSET" ${{ env.BIN_NAME }}
+          echo "ASSET=$ASSET" >> $GITHUB_ENV
+
+      - name: Package (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $ASSET = "${{ env.BIN_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip"
+          Copy-Item "target/${{ matrix.target }}/release/fork.exe" "${{ env.BIN_NAME }}.exe"
+          Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath $ASSET
+          echo "ASSET=$ASSET" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BIN_NAME }}-${{ matrix.target }}
+          path: ${{ env.ASSET }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate changelog
+        run: git-cliff --latest --strip header > RELEASE_NOTES.md
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          files: artifacts/*
