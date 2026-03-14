@@ -8,10 +8,6 @@ Fork scans your project and resolves your workspace into a ready container to bu
 
 Example:
 
-```zsh
-fork build -c rp2040
-```
-
 ![Example output](assets/carbon.png)
 
 You can also do:
