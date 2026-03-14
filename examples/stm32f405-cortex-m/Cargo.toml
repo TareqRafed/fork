@@ -1,0 +1,31 @@
+[package]
+name = "test"
+version = "0.1.0"
+authors = ["TareqRafed <tareq.rafed22@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+panic-halt = "0.2.0"
+hd44780-driver = "0.4.0"
+rtt-target = "0.6.1"
+micromath = "2.1.0"
+nb = "1.1.0"
+
+[dependencies.stm32f4xx-hal]
+version = "0.23.0"
+features = ["stm32f405", ]
+
+
+
+# Set the default for dependencies.
+[profile.dev.package."*"]
+opt-level = 0
+
+[profile.release]
+codegen-units = 1
+incremental = false
+debug = true
+lto = true
+opt-level = "s"

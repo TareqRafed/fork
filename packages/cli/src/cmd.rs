@@ -10,6 +10,7 @@ use crate::ui::{self, Status};
 #[derive(Parser)]
 #[command(name = "fork")]
 #[command(about = "Multi-recipe firmware development, simplified.", long_about = None)]
+#[command(version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

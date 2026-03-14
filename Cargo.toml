@@ -4,6 +4,7 @@ members = [
     "packages/cli",
     "packages/recipes",
     "packages/mdbook-boards",
+    "tests/e2e",
 ]
 
 exclude = [
@@ -14,5 +15,11 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
+description = "Container orchestration for firmware"
+license = "MIT"
+repository = "https://github.com/TareqRafed/fork"
+homepage = "https://github.com/TareqRafed/fork"
+keywords = ["embedded", "firmware", "docker", "build", "toolchain"]
+categories = ["command-line-utilities", "embedded", "development-tools"]

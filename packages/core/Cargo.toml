@@ -2,10 +2,13 @@
 name = "core"
 version.workspace = true
 edition.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 recipes = { path = "../recipes" }
-nusb = "0.1"
 anyhow = "1.0"
 serde_json = "1.0"
 which = "6"
