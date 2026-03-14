@@ -1,14 +1,15 @@
 use anyhow::{Result, bail};
+use recipes::{self, Board};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use fork_core::{bake_image, build_local_image, build_project, detect_runtime, ensure_image};
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use crate::ui::{self, Status};
 
 #[derive(Parser)]
 #[command(name = "fork")]
-#[command(about = "Multi-MCU firmware development, simplified.", long_about = None)]
+#[command(about = "Multi-recipe firmware development, simplified.", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -17,8 +18,8 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Build {
-        #[arg(short, long)]
-        mcu: Option<String>,
+        #[arg(short = 'c')]
+        recipe: String,
         #[arg(short, long)]
         tool: Option<String>,
         #[arg(short, long)]
@@ -31,7 +32,7 @@ pub enum Commands {
 
     Run {
         #[arg(short, long)]
-        mcu: Option<String>,
+        recipe: String,
         #[arg(default_value = ".")]
         path: PathBuf,
         /// command to execute inside the container
@@ -40,7 +41,7 @@ pub enum Commands {
 
     Bake {
         #[arg(short, long)]
-        mcu: Option<String>,
+        recipe: String,
         #[arg(short, long)]
         registry: String,
         #[arg(default_value = ".")]
@@ -49,7 +50,7 @@ pub enum Commands {
 }
 
 pub fn build_command(
-    mcu: Option<String>,
+    recipe: String,
     tool: Option<String>,
     registry: Option<String>,
     path: PathBuf,
@@ -58,7 +59,7 @@ pub fn build_command(
     let runtime = detect_runtime()?;
     ui::log(Status::Info, &format!("Using {}", runtime.bold()));
 
-    let board = ui::select_board(mcu.as_deref())?;
+    let board = Board::from_str(&recipe)?;
     let recipe = ui::select_recipe(&board, &path, tool.as_deref())?;
 
     if recipe.dockerfile.is_empty() {
@@ -70,7 +71,7 @@ pub fn build_command(
     }
 
     let image = {
-        let tag = boards::image_tag(registry.as_deref(), &board.name, &recipe);
+        let tag = recipes::image_tag(registry.as_deref(), &board.name, &recipe);
         ui::log(Status::Info, &format!("Ensuring image {}", tag.bold()));
 
         match registry.as_deref() {
@@ -100,11 +101,11 @@ pub fn build_command(
     Ok(())
 }
 
-pub fn run_command(mcu: Option<String>, path: PathBuf, command: String) -> Result<()> {
+pub fn run_command(recipe: String, path: PathBuf, command: String) -> Result<()> {
     let runtime = detect_runtime()?;
     ui::log(Status::Info, &format!("Using {}", runtime.bold()));
 
-    let board = ui::select_board(mcu.as_deref())?;
+    let board = Board::from_str(&recipe)?;
     let recipe = ui::select_recipe(&board, &path, None)?;
 
     ui::log(Status::Info, &format!("Running: {}", command.bold()));
@@ -116,17 +117,17 @@ pub fn run_command(mcu: Option<String>, path: PathBuf, command: String) -> Resul
     Ok(())
 }
 
-pub fn bake_command(mcu: Option<String>, registry: String, path: PathBuf) -> Result<()> {
+pub fn bake_command(recipe: String, registry: String, path: PathBuf) -> Result<()> {
     let runtime = detect_runtime()?;
     ui::log(Status::Info, &format!("Using {}", runtime.bold()));
 
-    let board = ui::select_board(mcu.as_deref())?;
+    let board = Board::from_str(&recipe)?;
 
     for recipe in board.all_recipes(&path) {
         if recipe.dockerfile.is_empty() {
             continue;
         }
-        let tag = boards::image_tag(Some(&registry), &board.name, &recipe);
+        let tag = recipes::image_tag(Some(&registry), &board.name, &recipe);
         ui::log(Status::Info, &format!("Baking {}", tag.bold()));
         bake_image(&runtime, &tag, &recipe.dockerfile)?;
         ui::log(Status::Ok, &format!("Pushed {}", tag));

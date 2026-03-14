@@ -2,20 +2,65 @@
 
 > **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-CLI to build any firmware for any MCUs, without buildtool abstractions or any additional configurations. 
+Fork scans your project and resolves them into containers, to build a firmware without configurations. 
 
-> Currently only handful MCUs are defined, but adding them is pretty easy, just open a PR and add a board to `/boards` 
+The intent was to not abstract or pollute project with any sort of dotfiles, configuratios or enforce any sort constrains on building so it can be hooked into any project.
 
-Simply:
+> Currently only handful MCUs are defined, but could be easily added by opening a PR and add a recipe definition into `/recipes` 
+
+Example:
 
 ```zsh
-fork build -m stm32f405
+fork build -c rp2040
+```
+
+Outputs:
+
+```
+  fork — container orchestration for firmware
+
+  → Using docker
+  ✓ Toolchain: rust → cargo → rustc → thumbv6mnonenabi
+  → Ensuring image fork-local/rp2040/rust.cargo.rustc.thumbv6mnonenabi:latest
+[+] Building 0.2s (7/7) FINISHED                                         docker:default
+ => [internal] load build definition from Dockerfile                               0.0s
+ => => transferring dockerfile: 122B                                               0.0s
+ => [internal] load metadata for docker.io/library/rust:latest                     0.0s
+ => [internal] load .dockerignore                                                  0.0s
+ => => transferring context: 2B                                                    0.0s
+ => [1/3] FROM docker.io/library/rust:latest                                       0.0s
+ => CACHED [2/3] RUN rustup target add thumbv6m-none-eabi                          0.0s
+ => CACHED [3/3] RUN cargo install flip-link                                       0.0s
+ => exporting to image                                                             0.0s
+ => => exporting layers                                                            0.0s
+ => => writing image sha256:d6b43c5fe1f26f23498f68424c84d29b28ccea8f71b6449f02a17  0.0s
+ => => naming to docker.io/fork-local/rp2040/rust.cargo.rustc.thumbv6mnonenabi:la  0.0s
+  → Building rp2040 with rust → cargo → rustc → thumbv6mnonenabi
+  ──────────────────────────────────────────────────
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded bare-metal v0.2.5
+  .
+  .
+  .
+  Downloaded rp2040-pac v0.6.0
+    Finished `dev` profile [optimized + debuginfo] target(s) in 2.09s
+  ──────────────────────────────────────────────────
+  ✓ Build complete.
+
 ```
 
 You can also do:
 
 ```zsh
-fork build -m stm32f405 -- --release [whatever your buildsystem takes]
+# Build firmware
+fork build -m stm32f405 -- [build command args]
+fork build -m stm32f405 -- --release  # uses cargo build --release 
+
+# Example: run custom commands inside container 
+fork run -m stm32f405 -- "[command your build system uses]"
+fork run -m stm32f405 -- "cargo test"
+fork run -m stm32f405 -- "ls -la"
 ```
 
 Fork detects your project's toolchain from config files, builds a Dockerfile and runs your build inside that container. No config files required in your project beyond what your build system already has.
@@ -55,27 +100,10 @@ Requires Docker or Podman.
 TODO
 ```
 
-## Usage
-
-```bash
-# Build for detected MCU (auto-detects build tool)
-fork build
-
-# Build with explicit MCU and build tool
-fork build --mcu rp2040 --tool embassy-rp
-
-# Flash firmware
-fork flash
-
-# Flash specific file
-fork flash --file ./my-firmware.uf2
-```
-
-
 
 ## Adding a Board
 
-Open a PR, create a TOML file in `boards/`:
+Open a PR, create a TOML file in `recipes/`:
 
 ```toml
 name = "example-board"
@@ -118,13 +146,9 @@ cmd = "default build command"
 
 ## FAQ
 
-**What if I need to customize the build?**
-
-The `build_command` in the board TOML is the full command passed to Docker — you control it.
-
 **My board isn't supported.**
 
-Add a TOML file in `boards/` and open a PR. The format is straightforward and documented in [Adding a Board](packages/docs/src/adding-a-board.md).
+Add a TOML file in `recipes/` and open a PR. The format is straightforward and documented in [Adding a Board](packages/docs/src/adding-a-board.md).
 
 **What about WSL / Windows?**
 

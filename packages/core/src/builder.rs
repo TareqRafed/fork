@@ -133,22 +133,22 @@ fn build_in_container(abs: &Path, image: &str, exec_cmd: &str, runtime: &str) ->
     let mut child = Command::new(runtime);
     child.args(["run", "--rm"]);
 
-    #[cfg(unix)]
-    {
-        let uid = std::process::Command::new("id")
-            .args(["-u"])
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_else(|_| "1000".into());
-
-        let gid = std::process::Command::new("id")
-            .args(["-g"])
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_else(|_| "1000".into());
-
-        child.args(["--user", &format!("{}:{}", uid, gid)]);
-    }
+    // #[cfg(unix)]
+    // {
+    //     let uid = std::process::Command::new("id")
+    //         .args(["-u"])
+    //         .output()
+    //         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    //         .unwrap_or_else(|_| "1000".into());
+    //
+    //     let gid = std::process::Command::new("id")
+    //         .args(["-g"])
+    //         .output()
+    //         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    //         .unwrap_or_else(|_| "1000".into());
+    //
+    //     child.args(["--user", &format!("{}:{}", uid, gid)]);
+    // }
 
     child.args(["-v", &bind, "-w", "/project", image, "sh", "-c", exec_cmd]);
     let mut child = child

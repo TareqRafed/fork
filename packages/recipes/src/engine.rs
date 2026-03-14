@@ -2,6 +2,9 @@ use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+use std::str::FromStr;
+
+use crate::get_supported_boards;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct DetectRule {
@@ -85,6 +88,19 @@ pub struct Recipe {
 pub struct Board {
     pub name: String,
     pub toolchains: Vec<Toolchain>,
+}
+
+impl FromStr for Board {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lower = s.to_lowercase();
+        get_supported_boards()
+            .iter()
+            .find(|b| b.name == lower)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Unsupported board: {}", s))
+    }
 }
 
 impl<'de> Deserialize<'de> for Board {

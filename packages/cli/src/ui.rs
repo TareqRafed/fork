@@ -1,15 +1,14 @@
 use anyhow::Result;
-use boards::{Board, Recipe, get_supported_boards};
+use recipes::{Board, Recipe};
 use colored::Colorize;
 use dialoguer::{Confirm, Select, theme::ColorfulTheme};
 use std::path::Path;
-use std::str::FromStr;
 
 pub fn title() {
     println!(
         "\n  {} {}\n",
         "fork".bold().cyan(),
-        "— multi-mcu firmware toolchain".dimmed()
+        "— container orchestration for firmware".dimmed()
     );
 }
 
@@ -38,49 +37,6 @@ pub fn select<T>(prompt: &str, items: &[T], label: impl Fn(&T) -> String) -> Res
         .default(0)
         .interact()
         .map_err(Into::into)
-}
-
-pub fn select_board(mcu_override: Option<&str>) -> Result<Board> {
-    if let Some(mcu) = mcu_override {
-        return Board::from_str(mcu);
-    }
-
-    let detected = detect_boards()?;
-    let all = get_supported_boards();
-
-    match detected.len() {
-        1 => {
-            let d = &detected[0];
-            let prompt = format!(
-                "Found {} {}. Use it?",
-                d.board.name.bold(),
-                format!("(VID 0x{:04x} · PID 0x{:04x})", d.vendor_id, d.product_id).dimmed()
-            );
-            if Confirm::with_theme(&ColorfulTheme::default())
-                .with_prompt(&prompt)
-                .default(true)
-                .interact()?
-            {
-                return Ok(d.board.clone());
-            }
-            let idx = select("Select a board", all, |b| b.name.clone())?;
-            Ok(all[idx].clone())
-        }
-        n if n > 1 => {
-            let idx = select("Multiple boards detected — select one", &detected, |d| {
-                format!(
-                    "{}  {}",
-                    d.board.name,
-                    format!("(VID 0x{:04x} · PID 0x{:04x})", d.vendor_id, d.product_id).dimmed()
-                )
-            })?;
-            Ok(detected[idx].board.clone())
-        }
-        _ => {
-            let idx = select("Select a board", all, |b| b.name.clone())?;
-            Ok(all[idx].clone())
-        }
-    }
 }
 
 pub fn select_recipe(

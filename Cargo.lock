@@ -71,18 +71,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
-name = "boards"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "glob",
- "serde",
- "serde_json",
- "toml",
- "which",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -133,11 +121,11 @@ name = "cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "boards",
  "clap",
  "colored",
  "core",
  "dialoguer",
+ "recipes",
 ]
 
 [[package]]
@@ -174,8 +162,8 @@ name = "core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "boards",
  "nusb",
+ "recipes",
  "serde_json",
  "toml",
  "which",
@@ -468,6 +456,18 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "recipes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glob",
+ "serde",
+ "serde_json",
+ "toml",
+ "which",
+]
 
 [[package]]
 name = "rustix"

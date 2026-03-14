@@ -10,18 +10,22 @@ fn main() -> Result<()> {
 
     match cli.command {
         cmd::Commands::Build {
-            mcu,
+            recipe,
             tool,
             registry,
             path,
             extra,
-        } => cmd::build_command(mcu, tool, registry, path, extra)?,
-        cmd::Commands::Run { mcu, path, command } => cmd::run_command(mcu, path, command)?,
+        } => cmd::build_command(recipe, tool, registry, path, extra)?,
+        cmd::Commands::Run {
+            recipe,
+            path,
+            command,
+        } => cmd::run_command(recipe, path, command)?,
         cmd::Commands::Bake {
-            mcu,
+            recipe,
             registry,
             path,
-        } => cmd::bake_command(mcu, registry, path)?,
+        } => cmd::bake_command(recipe, registry, path)?,
     }
 
     Ok(())
