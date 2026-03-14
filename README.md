@@ -52,13 +52,13 @@ You can also do:
 
 ```zsh
 # Build firmware
-fork build -m stm32f405 -- [build command args]
-fork build -m stm32f405 -- --release  # uses cargo build --release 
+fork build -c stm32f405 -- [build command args]
+fork build -c stm32f405 -- --release  # uses cargo build --release 
 
 # Example: run custom commands inside container 
-fork run -m stm32f405 -- "[command your build system uses]"
-fork run -m stm32f405 -- "cargo test"
-fork run -m stm32f405 -- "ls -la"
+fork run -c stm32f405 -- "[command your build system uses]"
+fork run -c stm32f405 -- "cargo test"
+fork run -c stm32f405 -- "ls -la"
 ```
 
 Fork detects your project's toolchain from config files, builds a Dockerfile and runs your build inside that container. No config files required in your project beyond what your build system already has.
@@ -86,7 +86,7 @@ docker run --rm -v $(pwd):/project -w /project \
 Fork allows you to do:
 
 ```bash
-fork build -m rp2040 ./firmware/rp2040 && fork build -m esp32 ./firmware/esp32
+fork build -c rp2040 ./firmware/rp2040 && fork build -c esp32 ./firmware/esp32
 ```
 
 
