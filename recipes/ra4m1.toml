@@ -1,0 +1,18 @@
+name = "ra4m1"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.thumbv7emnoneeabihf.ra]
+detect = [{ file = "Cargo.toml", key = "ra4m1" }]
+layer = [
+    "RUN rustup target add thumbv7em-none-eabihf",
+    "RUN cargo install flip-link",
+]
+cmd = "cargo build --release"
+
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM arduino/arduino-cli:latest"]
+# cmd = "arduino-cli core install arduino:renesas_uno && arduino-cli compile --fqbn arduino:renesas_uno:unor4minima --output-dir build ."

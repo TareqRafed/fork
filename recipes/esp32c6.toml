@@ -1,0 +1,40 @@
+name = "esp32c6"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}-slim", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.riscv32imacunknownnoneelf.esphal]
+detect = [{ file = "Cargo.toml", key = "esp-hal" }]
+layer = [
+    "RUN rustup target add riscv32imac-unknown-none-elf",
+    "RUN cargo install espflash"
+]
+cmd = "cargo build --release"
+
+[rust.cargo.rustc.riscv32imacunknownnoneelf.espidf]
+detect = [{ file = "Cargo.toml", key = "esp-idf-svc" }]
+layer = [
+    "RUN rustup target add riscv32imac-unknown-none-elf",
+    "RUN apt-get update && apt-get install -y cmake gperf python3 python3-pip",
+    "RUN cargo install ldproxy"
+]
+cmd = "cargo build"
+
+# [c]
+# detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+#
+# [c.cmake.gcc.riscv32espelf.espidf]
+# detect = [{ file = "sdkconfig", key = "CONFIG_IDF_TARGET_ESP32C6" }]
+# layer = ["FROM espressif/idf:release-v5.1"]
+# cmd = "idf.py build"
+#
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM arduino/arduino-cli:latest"]
+# cmd = "arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json && arduino-cli compile --fqbn esp32:esp32:esp32c6 ."
+#
+# [micropython]
+# detect = [{ file = "main.py" }]
+# layer = ["RUN pip install mpy-cross mpremote"]
+# cmd = "mpy-cross main.py && mpremote connect list"

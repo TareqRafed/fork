@@ -1,0 +1,23 @@
+name = "samd21"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.thumbv6mnonenabi.atsamdhal]
+detect = [{ file = "Cargo.toml", key = "atsamd-hal" }]
+layer = [
+    "RUN rustup target add thumbv6m-none-eabi",
+    "RUN cargo install flip-link",
+]
+cmd = "cargo build --release"
+
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM ghcr.io/getfork/samd21/arduinocli:latest"]
+# cmd = "arduino-cli core install arduino:samd --additional-urls https://downloads.arduino.cc/packages/package_index.json && arduino-cli compile --fqbn arduino:samd:arduino_zero_native --output-dir build ."
+#
+# [circuitpython]
+# detect = [{ file = "code.py", key = "import board" }]
+# layer = ["FROM ghcr.io/getfork/circuitpython:latest"]
+# cmd = "mpy-cross code.py"

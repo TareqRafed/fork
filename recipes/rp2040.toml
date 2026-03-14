@@ -10,25 +10,25 @@ detect = [{ file = ".cargo/config.toml", key = "thumbv6m-none-eabi" }]
 layer = ["RUN rustup target add thumbv6m-none-eabi", "RUN cargo install flip-link"]
 cmd = "cargo build"
 
-[c]
-detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
-
-[c.cmake.gcc.armnoneabi.picosdk]
-detect = [{ file = "CMakeLists.txt", key = "pico_sdk" }]
-layer = ["FROM ghcr.io/getfork/rp2040/c-cmake-gcc-armnoneabi-picosdk:latest"]
-cmd = "cmake -B build . && make -C build"
-
-[arduino]
-detect = [{ file = "*.ino" }]
-layer = ["FROM ghcr.io/getfork/rp2040/arduinocli:latest"]
-cmd = "arduino-cli core install rp2040:rp2040 --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json && arduino-cli compile --fqbn rp2040:rp2040:rpipico --output-dir build ."
-
-[micropython]
-detect = [{ file = "main.py", key = "import machine" }]
-layer = ["FROM ghcr.io/getfork/micropython:latest"]
-cmd = "mpy-cross main.py"
-
-[circuitpython]
-detect = [{ file = "code.py", key = "import board" }]
-layer = ["FROM ghcr.io/getfork/circuitpython:latest"]
-cmd = "mpy-cross code.py"
+# [c]
+# detect = [{ file = "CMakeLists.txt", key = "cmake_minimum_required" }]
+#
+# [c.cmake.gcc.armnoneabi.picosdk]
+# detect = [{ file = "CMakeLists.txt", key = "pico_sdk" }]
+# layer = ["FROM ghcr.io/getfork/rp2040/c-cmake-gcc-armnoneabi-picosdk:latest"]
+# cmd = "cmake -B build . && make -C build"
+#
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM ghcr.io/getfork/rp2040/arduinocli:latest"]
+# cmd = "arduino-cli core install rp2040:rp2040 --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json && arduino-cli compile --fqbn rp2040:rp2040:rpipico --output-dir build ."
+#
+# [micropython]
+# detect = [{ file = "main.py", key = "import machine" }]
+# layer = ["FROM ghcr.io/getfork/micropython:latest"]
+# cmd = "mpy-cross main.py"
+#
+# [circuitpython]
+# detect = [{ file = "code.py", key = "import board" }]
+# layer = ["FROM ghcr.io/getfork/circuitpython:latest"]
+# cmd = "mpy-cross code.py"

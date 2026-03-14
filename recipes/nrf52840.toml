@@ -1,0 +1,31 @@
+name = "nrf52840"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.thumbv7emnoneeabihf.embassy]
+detect = [{ file = "Cargo.toml", key = "embassy-nrf" }]
+layer = [
+    "RUN rustup target add thumbv7em-none-eabihf",
+    "RUN cargo install probe-rs-tools --locked",
+]
+cmd = "cargo build --release"
+
+[rust.cargo.rustc.thumbv7emnoneeabihf.rtic]
+detect = [{ file = "Cargo.toml", key = "rtic" }]
+layer = [
+    "RUN rustup target add thumbv7em-none-eabihf",
+    "RUN cargo install flip-link",
+]
+cmd = "cargo build --release"
+
+# [c]
+# detect = [{ file = "west.yml" }]
+# layer = ["FROM ghcr.io/getfork/nrf52840/c-cmake-gcc-armnoneabi-nrfconnect:latest"]
+# cmd = "west build -b nrf52840dk/nrf52840"
+#
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM ghcr.io/getfork/nrf52840/arduinocli:latest"]
+# cmd = "arduino-cli core install arduino:mbed_nano --additional-urls https://downloads.arduino.cc/packages/package_index.json && arduino-cli compile --fqbn arduino:mbed_nano:nano33ble --output-dir build ."

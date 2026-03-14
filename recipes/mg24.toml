@@ -1,0 +1,18 @@
+name = "mg24"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.thumbv8mmainnoneeabihf]
+detect = [{ file = ".cargo/config.toml", key = "thumbv8m.main-none-eabihf" }]
+layer = [
+    "RUN rustup target add thumbv8m.main-none-eabihf",
+    "RUN cargo install probe-rs-tools --locked",
+]
+cmd = "cargo build --release"
+
+# [arduino]
+# detect = [{ file = "*.ino" }]
+# layer = ["FROM arduino/arduino-cli:latest"]
+# cmd = "arduino-cli core install SiliconLabs:silabs --additional-urls https://siliconlabs.github.io/arduino/package_arduinosilabs_index.json && arduino-cli compile --fqbn SiliconLabs:silabs:xg24explorerkit --output-dir build ."
