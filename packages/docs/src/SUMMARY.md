@@ -2,7 +2,7 @@
 
 - [Introduction](./introduction.md)
 - [Installation](./installation.md)
-- [Toolchain Definition](./toml-syntax.md)
+- [Recipe Definition](./toml-syntax.md)
 - [fork build](./cmd-build.md)
 - [fork run](./cmd-run.md)
 - [fork bake](./cmd-bake.md)

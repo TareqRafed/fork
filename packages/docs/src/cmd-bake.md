@@ -14,7 +14,7 @@ fork bake [OPTIONS] [PATH]
 
 | Flag | Description |
 |------|-------------|
-| `-m, --mcu <name>` | Target MCU. If omitted, you will be prompted to select one. |
+| `-c, --recipe <name>` | Target recipe. If omitted, you will be prompted to select one. |
 | `-r, --registry <url>` | Registry prefix to push images to (e.g. `ghcr.io/your-org`). **Required.** |
 | `[PATH]` | Path to the workspace root. Defaults to `.` |
 
@@ -23,7 +23,7 @@ fork bake [OPTIONS] [PATH]
 Images are tagged as:
 
 ```
-{registry}/{board}/{recipe-label}:{version}
+{registry}/{recipe-name}/{recipe-label}:{version}
 ```
 
 The version is extracted from the `FROM` line in the generated Dockerfile. For example:
@@ -36,15 +36,15 @@ ghcr.io/your-org/rp2040/rust.cargo.rustc.thumbv6mnonenabi:1.76
 
 ```bash
 # Bake all rp2040 images and push to a registry
-fork bake --mcu rp2040 --registry ghcr.io/your-org
+fork bake --recipe rp2040 --registry ghcr.io/your-org
 
 # Bake all boards in CI
-fork bake --mcu esp32c3 --registry ghcr.io/your-org
-fork bake --mcu stm32f405 --registry ghcr.io/your-org
+fork bake --recipe esp32c3 --registry ghcr.io/your-org
+fork bake --recipe stm32f405 --registry ghcr.io/your-org
 ```
 
 Once images are pushed, users can pull them with `--registry` on `fork build`:
 
 ```bash
-fork build --mcu rp2040 --registry ghcr.io/your-org
+fork build --recipe rp2040 --registry ghcr.io/your-org
 ```

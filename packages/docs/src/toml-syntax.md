@@ -1,6 +1,8 @@
-# Toolchain Definition
+# Recipe Definition
 
-Board definitions are TOML files that describe how to build firmware for a specific MCU. They are structured as a tree — each node might add Dockerfile layers and always narrows down the toolchain. Fork walks the tree, runs `detect` rules against your workspace, and follows the matching path down to a leaf. The leaf provides the final image and build command.
+> This isn't exposed to you but it's the repo, read this if you are trying to open a PR to add more support
+
+Board definitions are TOML files that describe how to build firmware. They are structured as a tree — each node might add Dockerfile layers and always narrows down the toolchain. Fork walks the tree, runs `detect` rules against your workspace, and follows the matching path down to a leaf. The leaf provides the final image and build command.
 
 ## Structure
 
@@ -17,7 +19,7 @@ layer  = [...]
 cmd    = "build command"
 ```
 
-`name` is the board identifier used with `--mcu`. Everything else is a toolchain tree node.
+`name` is the board identifier used with `--recipe`. Everything else is a toolchain tree node.
 
 ## Node Fields
 
@@ -93,14 +95,4 @@ For a workspace that has `Cargo.toml` with an `edition` key and `.cargo/config.t
 FROM rust:1.76
 RUN rustup target add thumbv6m-none-eabi
 RUN cargo install flip-link
-```
-
-Then runs `cargo build` inside the container.
-
-## Recipe Label
-
-The resolved path becomes the recipe label (e.g. `rust → cargo → rustc → thumbv6mnonenabi`). Use it with `--tool` to select a specific recipe explicitly:
-
-```bash
-fork build --mcu rp2040 --tool thumbv6mnonenabi
 ```

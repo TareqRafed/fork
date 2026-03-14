@@ -4,7 +4,7 @@ PRs are welcome. If you're adding a new board or toolchain, test it on real hard
 
 ## Adding a Board
 
-Create a TOML file in `boards/` named after the MCU (e.g. `boards/nrf52840.toml`). See [Board Definition Syntax](./toml-syntax.md) for the full reference.
+Create a TOML file in `recipe/` named after the chip (e.g. `recipe/nrf52840.toml`). See [Board Definition Syntax](./toml-syntax.md) for the full reference.
 
 Minimal example:
 

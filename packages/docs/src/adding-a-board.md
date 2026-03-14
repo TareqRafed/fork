@@ -1,44 +1,112 @@
 # Adding a Board
 
-Fork the repo and create a TOML file in the `boards/` directory at the root of the repository:
+Fork the repo and create a TOML file in the `recipes/` directory at the root of the repository. The filename should match the board name (e.g. `recipes/my-board.toml`).
+
+## Structure
+
+A recipe file defines a tree of toolchains. Fork walks the tree, runs `detect` rules at each node, accumulates `layer` lines into a Dockerfile, and returns any leaf node that has a `cmd` as a buildable recipe.
 
 ```toml
-name = "your-board"
+name = "my-recipe"
 
+[<toolchain>]
+detect = [...]
+layer  = [...]
 
-[[build_tools]]
-name = "some-hal"
-docker_image = "rust:latest"
-build_command = ["cargo", "build", "--release", "--target", "thumbv7em-none-eabihf"]
-artifact_path = "target/thumbv7em-none-eabihf/release/firmware.bin"
-detect_command = "grep -q 'some-hal' Cargo.toml"
+[<toolchain>.<build-system>.<compiler>.<target>.<framework>]
+detect = [...]
+layer  = [...]
+cmd    = "cargo build --release"
 ```
+
+The nesting depth is flexible — add as many levels as you need to disambiguate variants. Each TOML table key becomes a segment of the recipe label (e.g. `rust → cargo → rustc → thumbv7emnoneeabihf → embassy`).
 
 ## Fields
 
-### Top-level
+### `name`
 
-| Field | Description |
-|-------|-------------|
-| `name` | Unique board identifier |
-| `flash_tool` | Tool used to flash the device (e.g. `elf2uf2-rs`, `espflash`, `dfu-util`) |
+The unique board identifier. Used with `fork build -c <name>`. Must be lowercase.
 
-### `[usb]`
+### `detect`
 
-| Field | Description |
-|-------|-------------|
-| `vid` | USB Vendor ID (hex) |
-| `pid` | USB Product ID(s) — single value or list |
+An array of rules that must **all** pass for this node to be selected.
 
-### `[[build_tools]]`
+```toml
+detect = [
+    { file = "Cargo.toml", key = "embassy-nrf" },
+    { file = "rust-toolchain.toml" },
+]
+```
 
-Each board can have multiple build tools. Fork selects one via auto-detection or the `--tool` flag.
+| Field  | Description |
+|--------|-------------|
+| `file` | Glob pattern relative to the project root. The rule passes if at least one matching file exists. |
+| `key`  | *(optional)* String to search for inside the matched file(s). For TOML/JSON files the key names and string values are searched; for all other files a plain substring match is used. |
 
-| Field | Description |
-|-------|-------------|
-| `name` | Build tool identifier (used with `--tool`) |
-| `docker_image` | Docker image to run the build in |
-| `build_command` | Command to run inside the container |
-| `artifact_path` | Path to the built firmware artifact, relative to the project root |
-| `detect_command` | Shell command run in the project directory to check compatibility — exit 0 means compatible |
+### `layer`
 
+An array of Dockerfile lines accumulated from the root down to the matched leaf. Each entry is either a literal string or a templated object.
+
+**Literal:**
+```toml
+layer = [
+    "FROM rust:latest",
+    "RUN rustup target add thumbv7em-none-eabihf",
+]
+```
+
+**Templated** — reads a value from a file in the project and substitutes `${var}`:
+```toml
+layer = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+```
+
+The `var` object also accepts an optional `map` table to rename values before substitution:
+```toml
+var = { file = "rust-toolchain.toml", key = "channel", map = { "stable" = "latest" } }
+```
+
+### `cmd`
+
+The build command to run inside the container. A node with `cmd` is a leaf — Fork will not descend further. Nodes without `cmd` are interior nodes used only for grouping and layer accumulation.
+
+
+## Example: Rust + Arduino board
+
+```toml
+name = "my-board"
+
+[rust]
+detect = [{ file = "Cargo.toml", key = "edition" }]
+layer  = [{ cmd = "FROM rust:${var}", var = { file = "rust-toolchain.toml", key = "channel" } }]
+
+[rust.cargo.rustc.thumbv7emnoneeabihf.myhal]
+detect = [{ file = "Cargo.toml", key = "my-hal" }]
+layer  = [
+    "RUN rustup target add thumbv7em-none-eabihf",
+    "RUN cargo install flip-link",
+]
+cmd = "cargo build --release"
+
+[arduino]
+detect = [{ file = "*.ino" }]
+layer  = ["FROM arduino/arduino-cli:latest"]
+cmd    = "arduino-cli core install vendor:core --additional-urls https://example.com/package_index.json && arduino-cli compile --fqbn vendor:core:myboard --output-dir build ."
+```
+
+## Detection and layer accumulation
+
+For a project that has a `Cargo.toml` containing `my-hal`, Fork builds this Dockerfile:
+
+```dockerfile
+FROM rust:1.80        # from [rust].layer (channel read from rust-toolchain.toml)
+RUN rustup target add thumbv7em-none-eabihf  # from the leaf layer
+RUN cargo install flip-link
+```
+
+And runs `cargo build --release` inside the resulting container.
+
+## Tips
+
+- **Table key names** can be anything but must be valid TOML bare keys (alphanumeric + `_`). Choose names that reflect the target or framework clearly, as they appear in the recipe label shown to users.
+- **Layer lines are raw Dockerfile instructions.** The first `FROM` encountered sets the base image; subsequent lines must be valid `RUN`, `COPY`, `ENV`, etc. instructions.
+- **`detect` is optional.** A node without `detect` always matches and is always included when a child matches.
