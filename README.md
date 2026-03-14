@@ -99,12 +99,12 @@ TODO
 ```
 
 
-## Adding a Board
+## Adding a Recipe
 
 Open a PR, create a TOML file in `recipes/`:
 
 ```toml
-name = "example-board"
+name = "example-recipe"
 
 [language]
 # Detect if this project uses this language
@@ -144,9 +144,9 @@ cmd = "default build command"
 
 ## FAQ
 
-**My board isn't supported.**
+**My setup isn't supported.**
 
-Add a TOML file in `recipes/` and open a PR. The format is straightforward and documented in [Adding a Board](packages/docs/src/adding-a-board.md).
+Add a TOML file in `recipes/` and open a PR. 
 
 **What about WSL / Windows?**
 
@@ -154,7 +154,7 @@ Should work, contributions welcome.
 
 ## Contributing
 
-PRs welcome. If you're adding support for a new board or build tool, include the TOML config and test it on real hardware if possible.
+PRs welcome. If you're adding support for a build tool, include the TOML config and test it on real hardware if possible.
 
 ## License
 
