@@ -9,7 +9,9 @@ fn main() {
     }
 
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input).expect("failed to read stdin");
+    io::stdin()
+        .read_to_string(&mut input)
+        .expect("failed to read stdin");
 
     let mut json: serde_json::Value =
         serde_json::from_str(&input).expect("failed to parse mdbook JSON");
@@ -19,16 +21,18 @@ fn main() {
         .expect("missing root in context")
         .to_owned();
 
-    let boards_dir = Path::new(&root).join("../../boards");
-    let content = generate_boards_md(&boards_dir);
+    let recipes_dir = Path::new(&root).join("../../recipes");
+    let content = generate_recipes_md(&recipes_dir);
 
-    replace_chapter(&mut json[1]["sections"], "boards.md", &content);
+    replace_chapter(&mut json[1]["sections"], "recipes.md", &content);
 
     print!("{}", json[1]);
 }
 
 fn replace_chapter(sections: &mut serde_json::Value, target_path: &str, content: &str) {
-    let Some(arr) = sections.as_array_mut() else { return };
+    let Some(arr) = sections.as_array_mut() else {
+        return;
+    };
     for item in arr.iter_mut() {
         if let Some(ch) = item.get_mut("Chapter") {
             let path_matches = ch["path"]
@@ -46,16 +50,16 @@ fn replace_chapter(sections: &mut serde_json::Value, target_path: &str, content:
     }
 }
 
-fn generate_boards_md(boards_dir: &Path) -> String {
-    let mut entries: Vec<_> = std::fs::read_dir(boards_dir)
-        .expect("cannot read boards/ directory")
+fn generate_recipes_md(recipes_dir: &Path) -> String {
+    let mut entries: Vec<_> = std::fs::read_dir(recipes_dir)
+        .expect("cannot read recipes/ directory")
         .filter_map(|e| e.ok())
         .map(|e| e.path())
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("toml"))
         .collect();
     entries.sort();
 
-    let mut out = String::from("# Supported Boards\n\n");
+    let mut out = String::from("# Supported recipes\n\n");
     out.push_str("Each board ships with definitions for the toolchains listed below. Fork auto-selects the right one based on your workspace files.\n");
 
     for path in &entries {
