@@ -3,7 +3,7 @@ set -e
 
 REPO="TareqRafed/fork"
 BIN="fork"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 # Detect OS and architecture
 OS="$(uname -s)"
@@ -61,11 +61,12 @@ trap 'rm -rf "$TMP"' EXIT
 curl -fsSL "$URL" -o "$TMP/$FILENAME"
 tar -xzf "$TMP/$FILENAME" -C "$TMP"
 
-if [ ! -w "$INSTALL_DIR" ]; then
-  echo "Installing to $INSTALL_DIR (requires sudo)..."
-  sudo install -m 755 "$TMP/$BIN" "$INSTALL_DIR/$BIN"
-else
-  install -m 755 "$TMP/$BIN" "$INSTALL_DIR/$BIN"
-fi
+mkdir -p "$INSTALL_DIR"
+install -m 755 "$TMP/$BIN" "$INSTALL_DIR/$BIN"
+
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*) ;;
+  *) echo "Note: add $INSTALL_DIR to your PATH if it isn't already" ;;
+esac
 
 echo "$BIN $VERSION installed to $INSTALL_DIR/$BIN"
