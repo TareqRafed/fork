@@ -17,14 +17,7 @@ echo "Releasing $TAG..."
 # 1. Bump version in root Cargo.toml (all packages inherit via workspace.package.version)
 sed -i 's/^version = ".*"/version = "'"$VERSION"'"/' Cargo.toml
 
-# 2. Generate Changelog
-if command -v git-cliff &> /dev/null; then
-    git-cliff --tag "$TAG" > CHANGELOG.md
-else
-    echo "Warning: git-cliff not found. Skipping changelog generation."
-fi
-
-# 3. Update Cargo.lock
+# 2. Update Cargo.lock
 cargo check -q
 
 # 4. Git operations
