@@ -2,9 +2,7 @@
 
 > **Beta software.** Fork is still in early development. If you run into issues, please [open a PR](https://github.com/TareqRafed/fork/pulls).
 
-Fork scans your project and resolves them into containers, to build a firmware without configurations. 
-
-The intent was to not abstract or pollute project with any sort of dotfiles, configuratios or enforce any sort constrains on building so it can be hooked into any project.
+Fork scans your project and resolves your workspace into a ready container to build firmware without manual configuration. It doesn't require dotfiles or enforce build constraints, making it easy to hook into any project.
 
 > Currently only handful MCUs are defined, but could be easily added by opening a PR and add a recipe definition into `/recipes` 
 
