@@ -8,7 +8,8 @@ Fork scans your project and resolves your workspace into a ready container to bu
 
 Example:
 
-![Example output](assets/example.svg)
+<img src="assets/example.svg" width="100%" />
+
 
 You can also do:
 
